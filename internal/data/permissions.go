@@ -25,10 +25,10 @@ type PermissionModel struct {
 
 func (m PermissionModel) GetAllForUser(userID int64) (Permissions, error) {
 	query := `
-		select permissions.code
+		select permissions.permission
 		  from permissions
-	inner join users_permissions on users_permissions.permission_id = permissions.id
-	inner join users on users_permissions.user_id = users.id
+	inner join user_permissions on user_permissions.permission_id = permissions.id
+	inner join users on user_permissions.user_id = users.id
 	     where users.id = $1	
 	`
 
@@ -64,9 +64,9 @@ func (m PermissionModel) GetAllForUser(userID int64) (Permissions, error) {
 
 func (m PermissionModel) AddForUser(userID int64, codes ...string) error {
 	query := `
-		insert into users_permissions
+		insert into user_permissions
 		select $1, permissions.id from permissions
-		 where permissions.code = any($2)
+		 where permissions.permission = any($2)
 	`
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
