@@ -21,7 +21,7 @@ confirm:
 ## run/api: Run the cmd/api application
 .PHONY: run/api
 run/api:
-	go run ./cmd/api/ --db-dsn=${GO_USER_DB_DSN} --db-max-open-conns=50 --addr=":9999"
+	go run ./cmd/api/ --db-dsn=${GO_USER_DB_DSN} --addr=":8080"
 
 # ============================================================================ #
 # DATABASE

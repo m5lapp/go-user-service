@@ -35,7 +35,6 @@ type app struct {
 func (app *app) routes() http.Handler {
 	app.Router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
 	app.Router.HandlerFunc(http.MethodPut, "/v1/users/activate", app.activateUserHandler)
-	app.Router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
 
 	app.Router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthTokenHandler)
 
@@ -70,10 +69,10 @@ func main() {
 	logger.Info("Database connection pool established")
 
 	app := &app{
-		webapp.New(serverCfg, logger),
-		appCfg,
-		data.NewModels(db),
-		mailer.New(&appCfg.smtp, templateFS),
+		WebApp: webapp.New(serverCfg, logger),
+		cfg:    appCfg,
+		models: data.NewModels(db),
+		mailer: mailer.New(&appCfg.smtp, templateFS),
 	}
 
 	err = app.Serve(app.routes())
