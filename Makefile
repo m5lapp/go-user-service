@@ -21,7 +21,12 @@ confirm:
 ## run/api: Run the cmd/api application
 .PHONY: run/api
 run/api:
-	go run ./cmd/api/ --db-dsn=${GO_USER_DB_DSN} --addr=":8080"
+	go run ./cmd/api/ --addr ":8080" \
+	    --db-dsn ${GO_USER_DB_DSN} \
+		--smtp-host ${GO_USER_SMTP_HOST} \
+		--smtp-username ${GO_USER_SMTP_USERNAME} \
+		--smtp-password ${GO_USER_SMTP_PASSWORD} \
+		--smtp-sender ${GO_USER_SMTP_SENDER}
 
 # ============================================================================ #
 # DATABASE

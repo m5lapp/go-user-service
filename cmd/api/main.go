@@ -36,7 +36,7 @@ func (app *app) routes() http.Handler {
 	app.Router.HandlerFunc(http.MethodPost, "/v1/users", app.registerUserHandler)
 	app.Router.HandlerFunc(http.MethodPut, "/v1/users/activate", app.activateUserHandler)
 
-	app.Router.HandlerFunc(http.MethodPost, "/v1/tokens/authentication", app.createAuthTokenHandler)
+	app.Router.HandlerFunc(http.MethodPost, "/v1/tokens", app.createAuthTokenHandler)
 
 	return app.Metrics(app.RecoverPanic(app.Router))
 }
@@ -47,6 +47,7 @@ func main() {
 
 	serverCfg.Flags(":8080")
 	appCfg.db.Flags("postgres", 25, 25, "15m")
+	appCfg.smtp.Flags("", "")
 
 	displayVersion := flag.Bool("version", false, "Display version and exit")
 
