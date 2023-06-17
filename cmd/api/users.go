@@ -13,9 +13,14 @@ import (
 
 func (app *app) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Name     string `json:"name"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		Email        string    `json:"email"`
+		Password     string    `json:"password"`
+		Name         string    `json:"name"`
+		FriendlyName string    `json:"friendly_name"`
+		BirthDate    time.Time `json:"birth_date,omitempty"`
+		Gender       string    `json:"gender,omitempty"`
+		CountryCode  string    `json:"country_code,omitempty"`
+		TimeZone     string    `json:"time_zone,omitempty"`
 	}
 
 	err := json.ReadJSON(w, r, &input)
@@ -26,9 +31,14 @@ func (app *app) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user := &data.User{
-		Name:      input.Name,
-		Email:     input.Email,
-		Activated: false,
+		Email:        input.Email,
+		Name:         input.Name,
+		FriendlyName: input.FriendlyName,
+		BirthDate:    input.BirthDate,
+		Gender:       input.Gender,
+		CountryCode:  input.CountryCode,
+		TimeZone:     input.TimeZone,
+		Activated:    false,
 	}
 
 	err = user.Password.Set(input.Password)
@@ -56,18 +66,14 @@ func (app *app) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = app.models.Permissions.AddForUser(user.ID, "movies:read")
-	if err != nil {
-		app.ServerErrorResponse(w, r, err)
-		return
-	}
-
+	// Generate a token for the user to activate with.
 	token, err := app.models.Tokens.New(user.ID, 3*24*time.Hour, data.ScopeActivation)
 	if err != nil {
 		app.ServerErrorResponse(w, r, err)
 		return
 	}
 
+	// Send the user an activation email in the background.
 	app.Background(func() {
 		data := map[string]any{
 			"activationToken": token.Plaintext,

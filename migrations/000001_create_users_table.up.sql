@@ -9,7 +9,7 @@ create table if not exists users (
     friendly_name text,
     birth_date    date,
     gender        text,
-    nationality   text,
+    country_code  text,
     time_zone     text,
     activated     bool not null default false,
     suspended     bool not null default false,
