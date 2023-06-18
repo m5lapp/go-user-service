@@ -319,3 +319,45 @@ func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 
 	return &user, nil
 }
+
+// DeleteByEmail soft deletes the user with the given email address. If
+// no matching record exists, ErrRecordNotFound is returned.
+func (m UserModel) DeleteByEmail(email string) error {
+	deleteTokens := `delete from tokens where user_id = $1`
+	deleteUser := `
+		update users
+		   set version = version + 1, updated_at = now(), deleted = true
+		 where id = $1
+		   and deleted = false
+	`
+
+	// Get the user first, this allows us to check they exist and have not
+	// already been deleted. It also gives us their user ID so we can delete
+	// their tokens.
+	user, err := m.GetByEmail(email)
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	// Delete all of the user's tokens.
+	_, err = m.DB.ExecContext(ctx, deleteTokens, user.ID)
+	if err != nil {
+		return err
+	}
+
+	// Soft-delete the user record.
+	_, err = m.DB.ExecContext(ctx, deleteUser, user.ID)
+	if err != nil {
+		switch {
+		case errors.Is(err, sql.ErrNoRows):
+			return ErrRecordNotFound
+		default:
+			return err
+		}
+	}
+
+	return nil
+}

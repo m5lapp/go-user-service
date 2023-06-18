@@ -146,3 +146,38 @@ func (app *app) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 		app.ServerErrorResponse(w, r, err)
 	}
 }
+
+func (app *app) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Email string `json:"email"`
+	}
+
+	err := jsonz.ReadJSON(w, r, &input)
+	if err != nil {
+		app.BadRequestResponse(w, r, err)
+		return
+	}
+
+	v := validator.New()
+	data.ValidateEmail(v, input.Email)
+	if !v.Valid() {
+		app.FailedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	err = app.models.Users.DeleteByEmail(input.Email)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.NotFoundResponse(w, r)
+		default:
+			app.ServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	err = jsonz.WriteJSON(w, http.StatusNoContent, nil, nil)
+	if err != nil {
+		app.ServerErrorResponse(w, r, err)
+	}
+}
