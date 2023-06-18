@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/m5lapp/go-user-service/serialisation/jsonz"
 	"github.com/m5lapp/go-user-service/validator"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -48,21 +49,20 @@ func (p *password) Matches(plaintextPassword string) (bool, error) {
 }
 
 type User struct {
-	ID           int64     `json:"id"`
-	Version      int       `json:"-"`
-	CreatedAt    time.Time `json:"created_at"`
-	UpdatedAt    time.Time `json:"updated_at"`
-	Email        string    `json:"email"`
-	Password     password  `json:"-"`
-	Name         string    `json:"name"`
-	FriendlyName string    `json:"friendly_name,omitempty"`
-	BirthDate    time.Time `json:"birth_date,omitempty"`
-	Gender       string    `json:"gender,omitempty"`
-	CountryCode  string    `json:"country_code,omitempty"`
-	TimeZone     string    `json:"time_zone,omitempty"`
-	Activated    bool      `json:"activated"`
-	Suspended    bool      `json:"suspended"`
-	Deleted      bool      `json:"deleted"`
+	ID           int64           `json:"id"`
+	Version      int             `json:"-"`
+	CreatedAt    time.Time       `json:"created_at"`
+	UpdatedAt    time.Time       `json:"updated_at"`
+	Email        string          `json:"email"`
+	Password     password        `json:"-"`
+	Name         string          `json:"name"`
+	FriendlyName *string         `json:"friendly_name,omitempty"`
+	BirthDate    *jsonz.DateOnly `json:"birth_date,omitempty"`
+	Gender       *string         `json:"gender,omitempty"`
+	CountryCode  *string         `json:"country_code,omitempty"`
+	TimeZone     *string         `json:"time_zone,omitempty"`
+	Activated    bool            `json:"activated"`
+	Suspended    bool            `json:"suspended"`
 }
 
 func (u *User) IsAnonymous() bool {
@@ -94,22 +94,32 @@ func ValidateUser(v *validator.Validator, user *User) {
 	v.Check(user.Name != "", "name", "must be provided")
 	v.Check(len(user.Name) <= 500, "name", "must not be more than 500 bytes long")
 
-	v.Check(len(user.FriendlyName) <= 500, "friendly_name", "must not be more than 500 bytes long")
-
-	if !user.BirthDate.IsZero() {
-		validAge := user.BirthDate.After(time.Now().AddDate(-120, 0, 0))
-		v.Check(validAge, "birth_date", "Must not be more than 120 years ago")
+	if user.FriendlyName != nil {
+		l := len(*user.FriendlyName) <= 500
+		v.Check(l, "friendly_name", "must not be more than 500 bytes long")
 	}
 
-	v.Check(len(user.Gender) <= 64, "gender", "must not be more than 64 bytes long")
+	if user.BirthDate != nil {
+		tooOld := user.BirthDate.After(time.Now().AddDate(-120, 0, 0))
+		v.Check(tooOld, "birth_date", "Must not be more than 120 years ago")
+		tooYoung := user.BirthDate.Before(time.Now().AddDate(-13, 0, 0))
+		v.Check(tooYoung, "birth_date", "Must be more than 13 years ago")
+	}
 
-	if user.CountryCode != "" {
+	if user.Gender != nil {
+		l := len(*user.Gender) <= 64
+		v.Check(l, "gender", "must not be more than 64 bytes long")
+	}
+
+	if user.CountryCode != nil {
 		// TODO: Ensure the country code is a valid option.
-		v.Check(len(user.CountryCode) == 2, "country_code", "must be exactly two bytes long")
+		v.Check(len(*user.CountryCode) == 2, "country_code", "must be exactly two bytes long")
 	}
 
-	_, err := time.LoadLocation(user.TimeZone)
-	v.Check(err == nil, "time_zone", "must be a valid time zone name")
+	if user.TimeZone != nil {
+		_, err := time.LoadLocation(*user.TimeZone)
+		v.Check(err == nil, "time_zone", "must be a valid time zone name")
+	}
 }
 
 type UserModel struct {
@@ -125,10 +135,10 @@ func (m UserModel) Insert(user *User) error {
 	query := `
 		insert into users (
 			email, password_hash, name, friendly_name, birth_date, gender,
-			country_code, time_zone, activated, suspended, deleted
+			country_code, time_zone
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-	 returning id, version, created_at, updated_at 
+		values ($1, $2, $3, $4, $5, $6, $7, $8)
+	 returning id, version, created_at, updated_at, activated, suspended
 	`
 
 	args := []any{
@@ -140,16 +150,13 @@ func (m UserModel) Insert(user *User) error {
 		user.Gender,
 		user.CountryCode,
 		user.TimeZone,
-		user.Activated,
-		user.Suspended,
-		user.Deleted,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	row := m.DB.QueryRowContext(ctx, query, args...)
-	err := row.Scan(&user.ID, &user.Version, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(&user.ID, &user.Version, &user.CreatedAt, &user.UpdatedAt, &user.Activated, &user.Suspended)
 	if err != nil {
 		switch {
 		case err.Error() == `pq: duplicate key value violates unique constraint "users_email_key"`:
@@ -170,7 +177,7 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 		    users.id, users.version, users.created_at, users.updated_at,
 			users.email, users.password_hash, users.name, users.friendly_name,
 			users.birth_date, users.gender, users.country_code, users.time_zone,
-		    users.activated, users.suspended, users.deleted
+		    users.activated, users.suspended
 		  from users
 		 where email = $1
 		   and deleted = false
@@ -196,7 +203,6 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 		&user.TimeZone,
 		&user.Activated,
 		&user.Suspended,
-		&user.Deleted,
 	)
 
 	if err != nil {
@@ -218,12 +224,11 @@ func (m UserModel) Update(user *User) error {
 	query := `
 		update users
 		   set version = version + 1, updated_at = now(),
-		       email = $1, password_hash = $2, name = $3,
-		       friendly_name = $4, birth_date = $5, gender = $6,
-			   country_code = $7, time_zone = $8, activated = $9,
-			   suspended = $10, deleted = $11
-		 where id = $1 and version = $2 and deleted = false
-		 returning version, updated_at
+		       email = $1, password_hash = $2, name = $3, friendly_name = $4,
+			   birth_date = $5, gender = $6, country_code = $7, time_zone = $8,
+			   activated = $9, suspended = $10
+		 where id = $11 and version = $12 and deleted = false
+		 returning version, updated_at, activated, suspended
 	`
 
 	args := []any{
@@ -237,7 +242,6 @@ func (m UserModel) Update(user *User) error {
 		user.TimeZone,
 		user.Activated,
 		user.Suspended,
-		user.Deleted,
 		user.ID,
 		user.Version,
 	}
@@ -246,7 +250,7 @@ func (m UserModel) Update(user *User) error {
 	defer cancel()
 
 	row := m.DB.QueryRowContext(ctx, query, args...)
-	err := row.Scan(&user.Version, &user.UpdatedAt)
+	err := row.Scan(&user.Version, &user.UpdatedAt, &user.Activated, &user.Suspended)
 	if err != nil {
 		switch {
 		case err.Error() == `pq: duplicate key value violoates unique constraint "users_email_key"`:
@@ -269,7 +273,7 @@ func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 		select users.id, users.version, users.created_at, users.updated_at,
 			   users.email, users.password_hash, users.name, users.friendly_name,
 			   users.birth_date, users.gender, users.country_code,
-			   users.time_zone, users.activated, users.suspended, users.deleted
+			   users.time_zone, users.activated, users.suspended
 		  from users
 	inner join tokens
 	        on users.id = tokens.user_id
@@ -303,7 +307,6 @@ func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 		&user.TimeZone,
 		&user.Activated,
 		&user.Suspended,
-		&user.Deleted,
 	)
 	if err != nil {
 		switch {

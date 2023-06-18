@@ -5,9 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	json "github.com/m5lapp/go-user-service/serialisation/json"
-
 	"github.com/m5lapp/go-user-service/internal/data"
+	"github.com/m5lapp/go-user-service/serialisation/jsonz"
 	"github.com/m5lapp/go-user-service/validator"
 )
 
@@ -17,7 +16,7 @@ func (app *app) createAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
 		Password string `json:"password"`
 	}
 
-	err := json.ReadJSON(w, r, &input)
+	err := jsonz.ReadJSON(w, r, &input)
 	if err != nil {
 		app.BadRequestResponse(w, r, err)
 		return
@@ -61,7 +60,7 @@ func (app *app) createAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := map[string]*data.Token{"authenticated_tokens": token}
-	err = json.WriteJSendSuccess(w, http.StatusCreated, nil, data)
+	err = jsonz.WriteJSendSuccess(w, http.StatusCreated, nil, data)
 	if err != nil {
 		app.ServerErrorResponse(w, r, err)
 	}

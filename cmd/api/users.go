@@ -5,25 +5,24 @@ import (
 	"net/http"
 	"time"
 
-	json "github.com/m5lapp/go-user-service/serialisation/json"
-
 	"github.com/m5lapp/go-user-service/internal/data"
+	"github.com/m5lapp/go-user-service/serialisation/jsonz"
 	"github.com/m5lapp/go-user-service/validator"
 )
 
 func (app *app) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 	var input struct {
-		Email        string    `json:"email"`
-		Password     string    `json:"password"`
-		Name         string    `json:"name"`
-		FriendlyName string    `json:"friendly_name"`
-		BirthDate    time.Time `json:"birth_date,omitempty"`
-		Gender       string    `json:"gender,omitempty"`
-		CountryCode  string    `json:"country_code,omitempty"`
-		TimeZone     string    `json:"time_zone,omitempty"`
+		Email        string          `json:"email"`
+		Password     string          `json:"password"`
+		Name         string          `json:"name"`
+		FriendlyName *string         `json:"friendly_name"`
+		BirthDate    *jsonz.DateOnly `json:"birth_date,omitempty"`
+		Gender       *string         `json:"gender,omitempty"`
+		CountryCode  *string         `json:"country_code,omitempty"`
+		TimeZone     *string         `json:"time_zone,omitempty"`
 	}
 
-	err := json.ReadJSON(w, r, &input)
+	err := jsonz.ReadJSON(w, r, &input)
 
 	if err != nil {
 		app.BadRequestResponse(w, r, err)
@@ -86,7 +85,7 @@ func (app *app) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
-	err = json.WriteJSendSuccess(w, http.StatusAccepted, nil, json.Envelope{"user": user})
+	err = jsonz.WriteJSendSuccess(w, http.StatusAccepted, nil, jsonz.Envelope{"user": user})
 	if err != nil {
 		app.ServerErrorResponse(w, r, err)
 	}
@@ -97,7 +96,7 @@ func (app *app) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 		TokenPlaintext string `json:"token"`
 	}
 
-	err := json.ReadJSON(w, r, &input)
+	err := jsonz.ReadJSON(w, r, &input)
 	if err != nil {
 		app.BadRequestResponse(w, r, err)
 		return
@@ -142,7 +141,7 @@ func (app *app) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = json.WriteJSendSuccess(w, http.StatusOK, nil, json.Envelope{"user": user})
+	err = jsonz.WriteJSendSuccess(w, http.StatusOK, nil, jsonz.Envelope{"user": user})
 	if err != nil {
 		app.ServerErrorResponse(w, r, err)
 	}
