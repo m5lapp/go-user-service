@@ -22,12 +22,3 @@ go.work
 
 # Development configuration files
 .envrc
-
-# Temporary development files
-config/
-mailer/
-persistence/
-serialisation/
-validator/
-vcs/
-webapp/

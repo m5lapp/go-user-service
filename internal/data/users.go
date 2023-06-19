@@ -7,8 +7,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/m5lapp/go-user-service/serialisation/jsonz"
-	"github.com/m5lapp/go-user-service/validator"
+	"github.com/m5lapp/go-service-toolkit/serialisation/jsonz"
+	"github.com/m5lapp/go-service-toolkit/validator"
 	"golang.org/x/crypto/bcrypt"
 )
 

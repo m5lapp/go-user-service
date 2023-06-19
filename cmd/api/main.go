@@ -8,12 +8,12 @@ import (
 	"os"
 
 	_ "github.com/lib/pq"
-	"github.com/m5lapp/go-user-service/config"
+	"github.com/m5lapp/go-service-toolkit/config"
+	"github.com/m5lapp/go-service-toolkit/mailer"
+	"github.com/m5lapp/go-service-toolkit/persistence/sqldb"
+	"github.com/m5lapp/go-service-toolkit/vcs"
+	"github.com/m5lapp/go-service-toolkit/webapp"
 	"github.com/m5lapp/go-user-service/internal/data"
-	"github.com/m5lapp/go-user-service/mailer"
-	"github.com/m5lapp/go-user-service/persistence/sqldb"
-	"github.com/m5lapp/go-user-service/vcs"
-	"github.com/m5lapp/go-user-service/webapp"
 	"golang.org/x/exp/slog"
 )
 

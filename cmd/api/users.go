@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/m5lapp/go-user-service/internal/data"
-	"github.com/m5lapp/go-user-service/serialisation/jsonz"
-	"github.com/m5lapp/go-user-service/validator"
+	"github.com/m5lapp/go-service-toolkit/serialisation/jsonz"
+	"github.com/m5lapp/go-service-toolkit/validator"
 )
 
 func (app *app) registerUserHandler(w http.ResponseWriter, r *http.Request) {

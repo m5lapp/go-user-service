@@ -8,7 +8,7 @@ import (
 	"encoding/base32"
 	"time"
 
-	"github.com/m5lapp/go-user-service/validator"
+	"github.com/m5lapp/go-service-toolkit/validator"
 )
 
 const (
