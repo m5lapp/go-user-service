@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/m5lapp/go-user-service/internal/data"
 	"github.com/m5lapp/go-service-toolkit/serialisation/jsonz"
 	"github.com/m5lapp/go-service-toolkit/validator"
+	"github.com/m5lapp/go-user-service/internal/data"
 )
 
 func (app *app) registerUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -142,6 +142,41 @@ func (app *app) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = jsonz.WriteJSendSuccess(w, http.StatusOK, nil, jsonz.Envelope{"user": user})
+	if err != nil {
+		app.ServerErrorResponse(w, r, err)
+	}
+}
+
+func (app *app) authUserHandler(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Token string `json:"token"`
+	}
+
+	err := jsonz.ReadJSON(w, r, &input)
+	if err != nil {
+		app.BadRequestResponse(w, r, err)
+	}
+
+	v := validator.New()
+	data.ValidateTokenPlaintext(v, input.Token)
+	if !v.Valid() {
+		app.InvalidAuthenticationTokenResponse(w, r)
+		return
+	}
+
+	user, err := app.models.Users.GetForToken(data.ScopeAuthentication, input.Token)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.InvalidAuthenticationTokenResponse(w, r)
+		default:
+			app.ServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	data := jsonz.Envelope{"user": user}
+	err = jsonz.WriteJSendSuccess(w, http.StatusOK, nil, data)
 	if err != nil {
 		app.ServerErrorResponse(w, r, err)
 	}
