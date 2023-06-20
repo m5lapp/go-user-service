@@ -85,6 +85,8 @@ func (app *app) registerUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 
+	app.Logger.Info("New user successfully registered", "user", user.Email)
+
 	err = jsonz.WriteJSendSuccess(w, http.StatusAccepted, nil, jsonz.Envelope{"user": user})
 	if err != nil {
 		app.ServerErrorResponse(w, r, err)
@@ -141,6 +143,8 @@ func (app *app) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	app.Logger.Info("User successfully activated", "user", user.Email)
+
 	err = jsonz.WriteJSendSuccess(w, http.StatusOK, nil, jsonz.Envelope{"user": user})
 	if err != nil {
 		app.ServerErrorResponse(w, r, err)
@@ -175,6 +179,8 @@ func (app *app) authUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	app.Logger.Debug("User successfully authenticated", "user", user.Email)
+
 	data := jsonz.Envelope{"user": user}
 	err = jsonz.WriteJSendSuccess(w, http.StatusOK, nil, data)
 	if err != nil {
@@ -194,7 +200,7 @@ func (app *app) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	v := validator.New()
-	data.ValidateEmail(v, input.Email)
+	validator.ValidateEmail(v, input.Email)
 	if !v.Valid() {
 		app.FailedValidationResponse(w, r, v.Errors)
 		return
@@ -210,6 +216,8 @@ func (app *app) deleteUserHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+
+	app.Logger.Info("User successfully deleted", "user", input.Email)
 
 	err = jsonz.WriteJSON(w, http.StatusNoContent, nil, nil)
 	if err != nil {

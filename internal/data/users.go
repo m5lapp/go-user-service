@@ -9,7 +9,6 @@ import (
 
 	"github.com/m5lapp/go-service-toolkit/serialisation/jsonz"
 	"github.com/m5lapp/go-service-toolkit/validator"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -17,37 +16,7 @@ var (
 	ErrDuplicateEmail = errors.New("duplicate email")
 )
 
-type password struct {
-	plaintext *string
-	hash      []byte
-}
-
-func (p *password) Set(plaintextPassword string) error {
-	hash, err := bcrypt.GenerateFromPassword([]byte(plaintextPassword), 14)
-	if err != nil {
-		return err
-	}
-
-	p.plaintext = &plaintextPassword
-	p.hash = hash
-
-	return nil
-}
-
-func (p *password) Matches(plaintextPassword string) (bool, error) {
-	err := bcrypt.CompareHashAndPassword(p.hash, []byte(plaintextPassword))
-	if err != nil {
-		switch {
-		case errors.Is(err, bcrypt.ErrMismatchedHashAndPassword):
-			return false, nil
-		default:
-			return false, err
-		}
-	}
-
-	return true, nil
-}
-
+// User represents a human user of a system.
 type User struct {
 	ID           int64           `json:"id"`
 	Version      int             `json:"-"`
@@ -65,23 +34,15 @@ type User struct {
 	Suspended    bool            `json:"suspended"`
 }
 
+// IsAnonymous compares the User receiver to the AnonymousUser struct.
 func (u *User) IsAnonymous() bool {
 	return u == AnonymousUser
 }
 
-func ValidateEmail(v *validator.Validator, email string) {
-	v.Check(email != "", "email", "must be provided")
-	v.Check(validator.Matches(email, validator.EmailRX), "email", "must be a valid email address")
-}
-
-func ValidatePasswordPlaintext(v *validator.Validator, password string) {
-	v.Check(password != "", "password", "must be provided")
-	v.Check(len(password) >= 8, "password", "must be at least 8 bytes long")
-	v.Check(len(password) <= 72, "password", "must not be more than 72 bytes long")
-}
-
+// ValidateUser checks if a user is considered valid and stores any errors in
+// the provided validator.Validator struct.
 func ValidateUser(v *validator.Validator, user *User) {
-	ValidateEmail(v, user.Email)
+	validator.ValidateEmail(v, user.Email)
 
 	if user.Password.plaintext != nil {
 		ValidatePasswordPlaintext(v, *user.Password.plaintext)
@@ -91,8 +52,8 @@ func ValidateUser(v *validator.Validator, user *User) {
 		panic("missing password hash for user")
 	}
 
-	v.Check(user.Name != "", "name", "must be provided")
-	v.Check(len(user.Name) <= 500, "name", "must not be more than 500 bytes long")
+	v.Check(user.Name != "", "name", "Must be provided")
+	v.Check(len(user.Name) <= 500, "name", "Must not be more than 500 bytes long")
 
 	if user.FriendlyName != nil {
 		l := len(*user.FriendlyName) <= 500
@@ -108,17 +69,17 @@ func ValidateUser(v *validator.Validator, user *User) {
 
 	if user.Gender != nil {
 		l := len(*user.Gender) <= 64
-		v.Check(l, "gender", "must not be more than 64 bytes long")
+		v.Check(l, "gender", "Must not be more than 64 bytes long")
 	}
 
 	if user.CountryCode != nil {
 		// TODO: Ensure the country code is a valid option.
-		v.Check(len(*user.CountryCode) == 2, "country_code", "must be exactly two bytes long")
+		v.Check(len(*user.CountryCode) == 2, "country_code", "Must be exactly two bytes long")
 	}
 
 	if user.TimeZone != nil {
 		_, err := time.LoadLocation(*user.TimeZone)
-		v.Check(err == nil, "time_zone", "must be a valid time zone name")
+		v.Check(err == nil, "time_zone", "Must be a valid time zone name")
 	}
 }
 

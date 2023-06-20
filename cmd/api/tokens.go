@@ -24,7 +24,7 @@ func (app *app) createAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
 
 	v := validator.New()
 
-	data.ValidateEmail(v, input.Email)
+	validator.ValidateEmail(v, input.Email)
 	data.ValidatePasswordPlaintext(v, input.Password)
 
 	if !v.Valid() {

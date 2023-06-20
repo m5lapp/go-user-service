@@ -13,8 +13,8 @@ require (
 )
 
 require (
-	github.com/m5lapp/go-service-toolkit v0.0.0-20230606170748-95b1f3a75318
-	golang.org/x/crypto v0.9.0
+	github.com/m5lapp/go-service-toolkit v0.0.0-20230620000542-61a2a39348df
+	golang.org/x/crypto v0.10.0
 )
 
 require (
