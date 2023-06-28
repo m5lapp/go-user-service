@@ -30,8 +30,8 @@ type User struct {
 	Gender       *string         `json:"gender,omitempty"`
 	CountryCode  *string         `json:"country_code,omitempty"`
 	TimeZone     *string         `json:"time_zone,omitempty"`
-	Activated    bool            `json:"activated"`
-	Suspended    bool            `json:"suspended"`
+	Activated    bool            `json:"-"`
+	Suspended    bool            `json:"-"`
 }
 
 // IsAnonymous compares the User receiver to the AnonymousUser struct.
@@ -57,7 +57,7 @@ func ValidateUser(v *validator.Validator, user *User) {
 
 	if user.FriendlyName != nil {
 		l := len(*user.FriendlyName) <= 500
-		v.Check(l, "friendly_name", "must not be more than 500 bytes long")
+		v.Check(l, "friendly_name", "Must not be more than 500 bytes long")
 	}
 
 	if user.BirthDate != nil {

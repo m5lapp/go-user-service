@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/julienschmidt/httprouter"
 	"github.com/m5lapp/go-service-toolkit/serialisation/jsonz"
 	"github.com/m5lapp/go-service-toolkit/validator"
 	"github.com/m5lapp/go-user-service/internal/data"
@@ -144,6 +145,41 @@ func (app *app) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	app.Logger.Info("User successfully activated", "user", user.Email)
+
+	err = jsonz.WriteJSendSuccess(w, http.StatusOK, nil, jsonz.Envelope{"user": user})
+	if err != nil {
+		app.ServerErrorResponse(w, r, err)
+	}
+}
+
+func (app *app) getUserHandler(w http.ResponseWriter, r *http.Request) {
+	params := httprouter.ParamsFromContext(r.Context())
+	email := params.ByName("email")
+
+	v := validator.New()
+	validator.ValidateEmail(v, email)
+
+	if !v.Valid() {
+		app.FailedValidationResponse(w, r, v.Errors)
+		return
+	}
+
+	var user *data.User
+	user, err := app.models.Users.GetByEmail(email)
+	if err != nil {
+		switch {
+		case errors.Is(err, data.ErrRecordNotFound):
+			app.NotFoundResponse(w, r)
+		default:
+			app.ServerErrorResponse(w, r, err)
+		}
+		return
+	}
+
+	if !user.Activated || user.Suspended {
+		app.NotPermittedResponse(w, r)
+		return
+	}
 
 	err = jsonz.WriteJSendSuccess(w, http.StatusOK, nil, jsonz.Envelope{"user": user})
 	if err != nil {
