@@ -1,7 +1,7 @@
 {{define "subject"}}Action Required: Activate Your New User Account{{end}}
 
 {{define "plainBody"}}
-Hi,
+Hi {{if .friendlyName}}{{.friendlyName}}{{else}}{{.name}}{{end}},
 
 Thank you for registering for a new user account. We're excited to have you on board!
 
@@ -28,7 +28,7 @@ The User Service Team
     </head>
 
     <body>
-        <p>Hi,</p>
+        <p>Hi {{if .friendlyName}}{{.friendlyName}}{{else}}{{.name}}{{end}},</p>
         <p>
             Thank you for registering for a new user account. We're excited to
             have you on board!
