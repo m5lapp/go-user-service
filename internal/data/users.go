@@ -7,6 +7,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/kjk/betterguid"
 	"github.com/m5lapp/go-service-toolkit/serialisation/jsonz"
 	"github.com/m5lapp/go-service-toolkit/validator"
 )
@@ -18,7 +19,8 @@ var (
 
 // User represents a human user of a system.
 type User struct {
-	ID           int64           `json:"id"`
+	ID           int64           `json:"-"`
+	UserID       string          `json:"user_id"`
 	Version      int             `json:"-"`
 	CreatedAt    time.Time       `json:"created_at"`
 	UpdatedAt    time.Time       `json:"updated_at"`
@@ -95,14 +97,17 @@ func (m UserModel) Insert(user *User) error {
 	// can be added to the User struct.
 	query := `
 		insert into users (
-			email, password_hash, name, friendly_name, birth_date, gender,
-			country_code, time_zone
+			user_id, email, password_hash, name, friendly_name, birth_date,
+			gender, country_code, time_zone
 		)
-		values ($1, $2, $3, $4, $5, $6, $7, $8)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	 returning id, version, created_at, updated_at, activated, suspended
 	`
 
+	user.UserID = betterguid.New()
+
 	args := []any{
+		user.UserID,
 		user.Email,
 		user.Password.hash,
 		user.Name,
@@ -136,9 +141,10 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 	query := `
 		select
 		    users.id, users.version, users.created_at, users.updated_at,
-			users.email, users.password_hash, users.name, users.friendly_name,
-			users.birth_date, users.gender, users.country_code, users.time_zone,
-		    users.activated, users.suspended
+			users.user_id, users.email, users.password_hash, users.name,
+			users.friendly_name, users.birth_date, users.gender,
+			users.country_code, users.time_zone, users.activated,
+			users.suspended
 		  from users
 		 where email = $1
 		   and deleted = false
@@ -154,6 +160,7 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 		&user.Version,
 		&user.CreatedAt,
 		&user.UpdatedAt,
+		&user.UserID,
 		&user.Email,
 		&user.Password.hash,
 		&user.Name,
@@ -188,8 +195,8 @@ func (m UserModel) Update(user *User) error {
 		       email = $1, password_hash = $2, name = $3, friendly_name = $4,
 			   birth_date = $5, gender = $6, country_code = $7, time_zone = $8,
 			   activated = $9, suspended = $10
-		 where id = $11 and version = $12 and deleted = false
-		 returning version, updated_at, activated, suspended
+		 where user_id = $11 and version = $12 and deleted = false
+		 returning id, version, updated_at, activated, suspended
 	`
 
 	args := []any{
@@ -203,7 +210,7 @@ func (m UserModel) Update(user *User) error {
 		user.TimeZone,
 		user.Activated,
 		user.Suspended,
-		user.ID,
+		user.UserID,
 		user.Version,
 	}
 
@@ -211,7 +218,7 @@ func (m UserModel) Update(user *User) error {
 	defer cancel()
 
 	row := m.DB.QueryRowContext(ctx, query, args...)
-	err := row.Scan(&user.Version, &user.UpdatedAt, &user.Activated, &user.Suspended)
+	err := row.Scan(&user.ID, &user.Version, &user.UpdatedAt, &user.Activated, &user.Suspended)
 	if err != nil {
 		switch {
 		case err.Error() == `pq: duplicate key value violoates unique constraint "users_email_key"`:
@@ -232,9 +239,10 @@ func (m UserModel) Update(user *User) error {
 func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error) {
 	query := `
 		select users.id, users.version, users.created_at, users.updated_at,
-			   users.email, users.password_hash, users.name, users.friendly_name,
-			   users.birth_date, users.gender, users.country_code,
-			   users.time_zone, users.activated, users.suspended
+			   users.user_id, users.email, users.password_hash, users.name,
+			   users.friendly_name, users.birth_date, users.gender,
+			   users.country_code, users.time_zone, users.activated,
+			   users.suspended
 		  from users
 	inner join tokens
 	        on users.id = tokens.user_id
@@ -258,6 +266,7 @@ func (m UserModel) GetForToken(tokenScope, tokenPlaintext string) (*User, error)
 		&user.Version,
 		&user.CreatedAt,
 		&user.UpdatedAt,
+		&user.UserID,
 		&user.Email,
 		&user.Password.hash,
 		&user.Name,
