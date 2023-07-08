@@ -20,10 +20,10 @@ var (
 // User represents a human user of a system.
 type User struct {
 	ID           int64           `json:"-"`
-	UserID       string          `json:"user_id"`
 	Version      int             `json:"-"`
-	CreatedAt    time.Time       `json:"created_at"`
-	UpdatedAt    time.Time       `json:"updated_at"`
+	CreatedAt    time.Time       `json:"-"`
+	UpdatedAt    time.Time       `json:"-"`
+	UserID       string          `json:"user_id"`
 	Email        string          `json:"email"`
 	Password     password        `json:"-"`
 	Name         string          `json:"name"`
