@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/kjk/betterguid"
@@ -135,9 +136,10 @@ func (m UserModel) Insert(user *User) error {
 	return nil
 }
 
-// GetByEmail queries the database for a user with the given email address. If
-// no matching record exists, ErrRecordNotFound is returned.
-func (m UserModel) GetByEmail(email string) (*User, error) {
+// GetByIdentifier queries the database for a user based on the given field for
+// the given value. If no matching record exists, ErrRecordNotFound is returned.
+// Valid field names are "email" and "user_id".
+func (m UserModel) GetByIdentifier(field, value string) (*User, error) {
 	query := `
 		select
 		    users.id, users.version, users.created_at, users.updated_at,
@@ -146,16 +148,21 @@ func (m UserModel) GetByEmail(email string) (*User, error) {
 			users.country_code, users.time_zone, users.activated,
 			users.suspended
 		  from users
-		 where email = $1
+		 where %s = $1
 		   and deleted = false
 	`
 
 	var user User
 
+	if field != "email" && field != "user_id" {
+		return nil, errors.New("lookup field must be one of email, user_id")
+	}
+	q := fmt.Sprintf(query, field)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	err := m.DB.QueryRowContext(ctx, query, email).Scan(
+	err := m.DB.QueryRowContext(ctx, q, value).Scan(
 		&user.ID,
 		&user.Version,
 		&user.CreatedAt,
@@ -304,7 +311,7 @@ func (m UserModel) DeleteByEmail(email string) error {
 	// Get the user first, this allows us to check they exist and have not
 	// already been deleted. It also gives us their user ID so we can delete
 	// their tokens.
-	user, err := m.GetByEmail(email)
+	user, err := m.GetByIdentifier("email", email)
 	if err != nil {
 		return err
 	}

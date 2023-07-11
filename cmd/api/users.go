@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/julienschmidt/httprouter"
@@ -156,10 +157,21 @@ func (app *app) activateUserHandler(w http.ResponseWriter, r *http.Request) {
 
 func (app *app) getUserHandler(w http.ResponseWriter, r *http.Request) {
 	params := httprouter.ParamsFromContext(r.Context())
-	email := params.ByName("email")
-
+	value := params.ByName("value")
+	identifier := ""
 	v := validator.New()
-	validator.ValidateEmail(v, email)
+
+	if strings.HasPrefix(r.URL.Path, "/v1/user/email/") {
+		identifier = "email"
+		validator.ValidateEmail(v, value)
+	} else if strings.HasPrefix(r.URL.Path, "/v1/user/id/") {
+		identifier = "user_id"
+		v.Check(validator.Matches(value, validator.BetterGUIDRX),
+			"user-id", "must be a valid BetterGUID")
+	}
+
+	v.Check(validator.PermittedValue[string](identifier, "email", "user_id"),
+		"identifier", "must be either email or user-id")
 
 	if !v.Valid() {
 		app.FailedValidationResponse(w, r, v.Errors)
@@ -167,7 +179,7 @@ func (app *app) getUserHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var user *data.User
-	user, err := app.models.Users.GetByEmail(email)
+	user, err := app.models.Users.GetByIdentifier(identifier, value)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):

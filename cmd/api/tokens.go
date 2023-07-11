@@ -32,7 +32,7 @@ func (app *app) createAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := app.models.Users.GetByEmail(input.Email)
+	user, err := app.models.Users.GetByIdentifier("email", input.Email)
 	if err != nil {
 		switch {
 		case errors.Is(err, data.ErrRecordNotFound):
